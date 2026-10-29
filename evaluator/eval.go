@@ -54,6 +54,9 @@ type Result struct {
 	// roll whose custom faces are not numbers.
 	Total int
 	Terms []Term
+	// Numeric is false when Total is meaningless because the expression is a
+	// lone roll of non-numeric custom faces.
+	Numeric bool
 	// Faces holds the face strings of a lone custom-faced roll such as
 	// 5d{red,blue,green}, in roll order. It is nil otherwise.
 	Faces []string
@@ -65,7 +68,11 @@ func Eval(n parser.Node, src Source) (Result, error) {
 	if err := collect(n, 1, src, &res); err != nil {
 		return Result{}, err
 	}
+	res.Numeric = true
 	for _, t := range res.Terms {
+		if t.nonNumeric {
+			res.Numeric = false
+		}
 		if t.nonNumeric && len(res.Terms) > 1 {
 			return Result{}, errors.New("non-numeric faces cannot be combined with other terms")
 		}
