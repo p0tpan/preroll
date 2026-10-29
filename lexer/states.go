@@ -14,9 +14,16 @@ func isASCIIAlpha(r rune) bool {
 
 type stateFunc func(*lexer) stateFunc
 
+// skipSpace discards spaces and tabs between tokens.
+func skipSpace(l *lexer) {
+	l.acceptRun(" \t")
+	l.ignore()
+}
+
 func lexModifier(l *lexer) stateFunc {
 	logger := l.logger.WithGroup("lexModifier")
 	logger.Debug("entering lexModifier")
+	skipSpace(l)
 	switch {
 	case strings.HasPrefix(l.input[l.pos:], keepHighest):
 		l.pos += len(keepHighest)
@@ -45,39 +52,42 @@ func lexModifier(l *lexer) stateFunc {
 }
 
 func lexExplode(l *lexer) stateFunc {
-	if strings.HasPrefix(l.input[l.pos:], explodeOpen) {
-		l.pos += len(explodeOpen)
-		l.emit(explodeOpenToken)
-		if l.accept(DIGITS) {
-			l.acceptRun(DIGITS)
-			l.emit(explodeCountToken)
-		}
-		if l.peek() == '}' {
-			l.next()
-			l.emit(explodeCloseToken)
-			return lexDieCount
-		}
+	if !strings.HasPrefix(l.input[l.pos:], explodeOpen) {
+		return lexDieCount
 	}
+	l.pos += len(explodeOpen)
+	l.emit(explodeOpenToken)
+	if !l.accept(NON_ZERO_DIGITS) {
+		return l.errorf("expected explode count at position %d", l.pos)
+	}
+	l.acceptRun(DIGITS)
+	l.emit(explodeCountToken)
+	if !l.accept(explodeClose) {
+		return l.errorf("expected %q at position %d", explodeClose, l.pos)
+	}
+	l.emit(explodeCloseToken)
 	return lexDieCount
 }
 
 func lexDieCount(l *lexer) stateFunc {
 	logger := l.logger.WithGroup("lexDieCount")
 	logger.With("lexer", l).Debug("entering lexDieCount")
-	if l.accept(NON_ZERO_DIGITS) {
-		l.acceptRun(DIGITS)
-		l.emit(numberToken)
+	skipSpace(l)
+	if !l.accept(NON_ZERO_DIGITS) {
+		return l.errorf("expected die count at position %d", l.pos)
 	}
+	l.acceptRun(DIGITS)
+	l.emit(numberToken)
 	return lexDie
 }
 
 func lexDie(l *lexer) stateFunc {
-	if strings.HasPrefix(l.input[l.pos:], die) {
-		l.pos += len(die)
-		l.emit(dieToken)
-		return lexFaces
+	if !strings.HasPrefix(l.input[l.pos:], die) {
+		return l.errorf("expected %q at position %d", die, l.pos)
 	}
-	return nil
+	l.pos += len(die)
+	l.emit(dieToken)
+	return lexFaces
 }
 
 func lexFaces(l *lexer) stateFunc {
@@ -87,15 +97,18 @@ func lexFaces(l *lexer) stateFunc {
 		l.emit(facesOpenToken)
 		for {
 			l.acceptRun(DIGITS + ASCII_ALPHA)
+			if l.pos == l.start {
+				return l.errorf("expected face at position %d", l.pos)
+			}
 			l.emit(faceToken)
 			switch {
-			case l.peek() == ',':
-				l.next()
+			case l.accept(facesSeparator):
 				l.emit(facesSeparatorToken)
-			case l.peek() == '}':
-				l.next()
+			case l.accept(facesClose):
 				l.emit(facesCloseToken)
 				return lexAddSubtract
+			default:
+				return l.errorf("expected %q or %q at position %d", facesSeparator, facesClose, l.pos)
 			}
 		}
 	case l.accept(NON_ZERO_DIGITS):
@@ -103,25 +116,42 @@ func lexFaces(l *lexer) stateFunc {
 		l.emit(numberToken)
 		return lexAddSubtract
 	}
-	return nil
+	return l.errorf("expected face count or %q at position %d", facesOpen, l.pos)
 }
 
 func lexAddSubtract(l *lexer) stateFunc {
+	skipSpace(l)
 	switch {
+	case l.peek() == EOF:
+		return nil
 	case strings.HasPrefix(l.input[l.pos:], addition):
 		l.pos += len(addition)
 		l.emit(additionToken)
 	case strings.HasPrefix(l.input[l.pos:], subtraction):
 		l.pos += len(subtraction)
 		l.emit(subtractionToken)
+	default:
+		return l.errorf("unexpected input %q at position %d", l.input[l.pos:], l.pos)
 	}
-	switch {
-	case l.accept(NON_ZERO_DIGITS):
-		l.acceptRun(DIGITS)
-		l.emit(numberToken)
+	return lexOperand
+}
+
+// lexOperand lexes the right-hand side of an operator: either a plain number
+// or another roll, which may carry its own modifier.
+func lexOperand(l *lexer) stateFunc {
+	skipSpace(l)
+	for _, m := range []string{keepHighest, keepLowest, dropHighest, dropLowest, explode} {
+		if strings.HasPrefix(l.input[l.pos:], m) {
+			return lexModifier
+		}
 	}
-	if l.peek() == EOF {
-		return nil
+	if !l.accept(NON_ZERO_DIGITS) {
+		return l.errorf("expected number or roll at position %d", l.pos)
 	}
-	return lexModifier
+	l.acceptRun(DIGITS)
+	l.emit(numberToken)
+	if strings.HasPrefix(l.input[l.pos:], die) {
+		return lexDie
+	}
+	return lexAddSubtract
 }

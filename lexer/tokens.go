@@ -6,7 +6,7 @@ type tokenType int
 const (
 	EOF             = '\u0000'
 	DIGITS          = "0123456789"
-	NON_ZERO_DIGITS = "0123456789"
+	NON_ZERO_DIGITS = "123456789"
 	ASCII_ALPHA     = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
