@@ -27,23 +27,23 @@ func lexModifier(l *lexer) stateFunc {
 	switch {
 	case strings.HasPrefix(l.input[l.pos:], keepHighest):
 		l.pos += len(keepHighest)
-		l.emit(keepHighestToken)
+		l.emit(KeepHighestToken)
 		return lexDieCount
 	case strings.HasPrefix(l.input[l.pos:], keepLowest):
 		l.pos += len(keepLowest)
-		l.emit(keepLowestToken)
+		l.emit(KeepLowestToken)
 		return lexDieCount
 	case strings.HasPrefix(l.input[l.pos:], dropHighest):
 		l.pos += len(dropHighest)
-		l.emit(dropHighestToken)
+		l.emit(DropHighestToken)
 		return lexDieCount
 	case strings.HasPrefix(l.input[l.pos:], dropLowest):
 		l.pos += len(dropLowest)
-		l.emit(dropLowestToken)
+		l.emit(DropLowestToken)
 		return lexDieCount
 	case strings.HasPrefix(l.input[l.pos:], explode):
 		l.pos += len(explode)
-		l.emit(explodeToken)
+		l.emit(ExplodeToken)
 		return lexExplode
 	default:
 		logger.Debug("no modifier found")
@@ -56,16 +56,16 @@ func lexExplode(l *lexer) stateFunc {
 		return lexDieCount
 	}
 	l.pos += len(explodeOpen)
-	l.emit(explodeOpenToken)
+	l.emit(ExplodeOpenToken)
 	if !l.accept(NON_ZERO_DIGITS) {
 		return l.errorf("expected explode count at position %d", l.pos)
 	}
 	l.acceptRun(DIGITS)
-	l.emit(explodeCountToken)
+	l.emit(ExplodeCountToken)
 	if !l.accept(explodeClose) {
 		return l.errorf("expected %q at position %d", explodeClose, l.pos)
 	}
-	l.emit(explodeCloseToken)
+	l.emit(ExplodeCloseToken)
 	return lexDieCount
 }
 
@@ -77,7 +77,7 @@ func lexDieCount(l *lexer) stateFunc {
 		return l.errorf("expected die count at position %d", l.pos)
 	}
 	l.acceptRun(DIGITS)
-	l.emit(numberToken)
+	l.emit(NumberToken)
 	return lexDie
 }
 
@@ -86,7 +86,7 @@ func lexDie(l *lexer) stateFunc {
 		return l.errorf("expected %q at position %d", die, l.pos)
 	}
 	l.pos += len(die)
-	l.emit(dieToken)
+	l.emit(DieToken)
 	return lexFaces
 }
 
@@ -94,18 +94,18 @@ func lexFaces(l *lexer) stateFunc {
 	switch {
 	case strings.HasPrefix(l.input[l.pos:], facesOpen):
 		l.pos += len(facesOpen)
-		l.emit(facesOpenToken)
+		l.emit(FacesOpenToken)
 		for {
 			l.acceptRun(DIGITS + ASCII_ALPHA)
 			if l.pos == l.start {
 				return l.errorf("expected face at position %d", l.pos)
 			}
-			l.emit(faceToken)
+			l.emit(FaceToken)
 			switch {
 			case l.accept(facesSeparator):
-				l.emit(facesSeparatorToken)
+				l.emit(FacesSeparatorToken)
 			case l.accept(facesClose):
-				l.emit(facesCloseToken)
+				l.emit(FacesCloseToken)
 				return lexAddSubtract
 			default:
 				return l.errorf("expected %q or %q at position %d", facesSeparator, facesClose, l.pos)
@@ -113,7 +113,7 @@ func lexFaces(l *lexer) stateFunc {
 		}
 	case l.accept(NON_ZERO_DIGITS):
 		l.acceptRun(DIGITS)
-		l.emit(numberToken)
+		l.emit(NumberToken)
 		return lexAddSubtract
 	}
 	return l.errorf("expected face count or %q at position %d", facesOpen, l.pos)
@@ -126,10 +126,10 @@ func lexAddSubtract(l *lexer) stateFunc {
 		return nil
 	case strings.HasPrefix(l.input[l.pos:], addition):
 		l.pos += len(addition)
-		l.emit(additionToken)
+		l.emit(AdditionToken)
 	case strings.HasPrefix(l.input[l.pos:], subtraction):
 		l.pos += len(subtraction)
-		l.emit(subtractionToken)
+		l.emit(SubtractionToken)
 	default:
 		return l.errorf("unexpected input %q at position %d", l.input[l.pos:], l.pos)
 	}
@@ -149,7 +149,7 @@ func lexOperand(l *lexer) stateFunc {
 		return l.errorf("expected number or roll at position %d", l.pos)
 	}
 	l.acceptRun(DIGITS)
-	l.emit(numberToken)
+	l.emit(NumberToken)
 	if strings.HasPrefix(l.input[l.pos:], die) {
 		return lexDie
 	}

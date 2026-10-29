@@ -1,7 +1,7 @@
 package lexer
 
-//go:generate stringer -type=tokenType
-type tokenType int
+//go:generate stringer -type=TokenType
+type TokenType int
 
 const (
 	EOF             = '\u0000'
@@ -27,27 +27,27 @@ const (
 )
 
 const (
-	errorToken tokenType = iota
-	eofToken
-	keepHighestToken
-	keepLowestToken
-	dropHighestToken
-	dropLowestToken
-	explodeToken
-	dieToken
-	numberToken
-	additionToken
-	subtractionToken
-	facesOpenToken
-	facesCloseToken
-	facesSeparatorToken
-	faceToken
-	explodeOpenToken
-	explodeCloseToken
-	explodeCountToken
+	ErrorToken TokenType = iota
+	EofToken
+	KeepHighestToken
+	KeepLowestToken
+	DropHighestToken
+	DropLowestToken
+	ExplodeToken
+	DieToken
+	NumberToken
+	AdditionToken
+	SubtractionToken
+	FacesOpenToken
+	FacesCloseToken
+	FacesSeparatorToken
+	FaceToken
+	ExplodeOpenToken
+	ExplodeCloseToken
+	ExplodeCountToken
 )
 
 type Token struct {
-	Type tokenType
+	Type TokenType
 	Raw  string
 }

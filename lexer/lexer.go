@@ -81,7 +81,7 @@ func (l *lexer) acceptFn(matchers ...func(rune) bool) {
 	l.backup()
 }
 
-func (l *lexer) emit(t tokenType) {
+func (l *lexer) emit(t TokenType) {
 	token := Token{t, l.input[l.start:l.pos]}
 	l.tokens = append(l.tokens, token)
 	l.start = l.pos
@@ -102,7 +102,7 @@ func (l *lexer) Items() []Token {
 
 func (l *lexer) errorf(format string, args ...any) stateFunc {
 	l.tokens = append(l.tokens, Token{
-		Type: errorToken,
+		Type: ErrorToken,
 		Raw:  fmt.Sprintf(format, args...),
 	},
 	)
