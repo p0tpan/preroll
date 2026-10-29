@@ -20,6 +20,8 @@ func skipSpace(l *lexer) {
 	l.ignore()
 }
 
+// lexModifier is the start of every roll. It consumes an optional keep, drop
+// or explode prefix, then hands off to lexDieCount.
 func lexModifier(l *lexer) stateFunc {
 	logger := l.logger.WithGroup("lexModifier")
 	logger.Debug("entering lexModifier")
@@ -51,6 +53,8 @@ func lexModifier(l *lexer) stateFunc {
 	}
 }
 
+// lexExplode lexes the optional "{N}" limit that follows "!". Both the count
+// and the closing brace are required once the opening brace is seen.
 func lexExplode(l *lexer) stateFunc {
 	if !strings.HasPrefix(l.input[l.pos:], explodeOpen) {
 		return lexDieCount
@@ -69,6 +73,8 @@ func lexExplode(l *lexer) stateFunc {
 	return lexDieCount
 }
 
+// lexDieCount lexes the mandatory number of dice. A leading zero is rejected
+// because the grammar only allows positive integers.
 func lexDieCount(l *lexer) stateFunc {
 	logger := l.logger.WithGroup("lexDieCount")
 	logger.With("lexer", l).Debug("entering lexDieCount")
@@ -81,6 +87,7 @@ func lexDieCount(l *lexer) stateFunc {
 	return lexDie
 }
 
+// lexDie consumes the "d" separating the die count from its faces.
 func lexDie(l *lexer) stateFunc {
 	if !strings.HasPrefix(l.input[l.pos:], die) {
 		return l.errorf("expected %q at position %d", die, l.pos)
@@ -90,6 +97,9 @@ func lexDie(l *lexer) stateFunc {
 	return lexFaces
 }
 
+// lexFaces lexes either a numeric side count (d20) or a braced, comma
+// separated list of custom faces (d{red,blue}). Every unexpected character
+// ends the lex with an error token so the loop below always terminates.
 func lexFaces(l *lexer) stateFunc {
 	switch {
 	case strings.HasPrefix(l.input[l.pos:], facesOpen):
@@ -119,6 +129,9 @@ func lexFaces(l *lexer) stateFunc {
 	return l.errorf("expected face count or %q at position %d", facesOpen, l.pos)
 }
 
+// lexAddSubtract ends a roll. At end of input lexing is done; otherwise an
+// operator must follow and the next operand is lexed, which is how chains
+// like 1d20+5+3 continue.
 func lexAddSubtract(l *lexer) stateFunc {
 	skipSpace(l)
 	switch {

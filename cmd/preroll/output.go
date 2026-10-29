@@ -11,6 +11,7 @@ import (
 	"github.com/therealfakemoot/preroll/evaluator"
 )
 
+// writers maps each -format value to its renderer.
 var writers = map[string]func(io.Writer, table) error{
 	"csv":  writeCSV,
 	"json": writeJSON,
@@ -40,6 +41,7 @@ func diceText(r evaluator.Result, sep string) string {
 	return strings.Join(parts, sep)
 }
 
+// totalText is blank when the roll has no numeric total (custom faces).
 func totalText(r evaluator.Result) string {
 	if !r.Numeric {
 		return ""
@@ -47,6 +49,8 @@ func totalText(r evaluator.Result) string {
 	return strconv.Itoa(r.Total)
 }
 
+// writeCSV emits a "# roll=… seed=… n=…" comment line so the table can be
+// regenerated, followed by a regular CSV body.
 func writeCSV(w io.Writer, t table) error {
 	if _, err := fmt.Fprintf(w, "# roll=%s seed=%d n=%d\n", t.Roll, t.Seed, len(t.Results)); err != nil {
 		return err
@@ -90,6 +94,8 @@ type jsonTable struct {
 	Rolls []jsonRoll `json:"rolls"`
 }
 
+// writeJSON emits metadata at the top level next to the rolls. A roll with no
+// numeric total has a null "total".
 func writeJSON(w io.Writer, t table) error {
 	out := jsonTable{Roll: t.Roll, Seed: t.Seed, Count: len(t.Results), Rolls: make([]jsonRoll, 0, len(t.Results))}
 	for _, r := range t.Results {

@@ -24,6 +24,11 @@ func Parse(input string, logger *slog.Logger) (Node, error) {
 	return p.parse()
 }
 
+// parse implements:
+//
+//	expr := roll { ("+" | "-") (roll | number) }
+//
+// The loop builds the tree left-associatively.
 func (p *parser) parse() (Node, error) {
 	// The lexer stops at the first error and reports it as the last token.
 	if n := len(p.tokens); n > 0 && p.tokens[n-1].Type == lexer.ErrorToken {
@@ -72,6 +77,7 @@ func (p *parser) operand() (Node, error) {
 	return p.roll()
 }
 
+// roll parses [modifier] count "d" (sides | "{" faces "}").
 func (p *parser) roll() (Node, error) {
 	var r Roll
 
@@ -147,6 +153,7 @@ func (p *parser) roll() (Node, error) {
 	return r, nil
 }
 
+// expect consumes a token of type t as an integer, or fails describing what.
 func (p *parser) expect(t lexer.TokenType, what string) (int, error) {
 	if !p.more() || p.peek().Type != t {
 		return 0, p.errorf("expected %s", what)
@@ -173,6 +180,7 @@ func (p *parser) peek() lexer.Token {
 	return p.tokens[p.pos]
 }
 
+// errorf reports an error at the current token index.
 func (p *parser) errorf(format string, args ...any) error {
 	return fmt.Errorf("parse error at token %d: %s", p.pos, fmt.Sprintf(format, args...))
 }

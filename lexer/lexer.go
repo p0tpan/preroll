@@ -21,6 +21,8 @@ func (l *lexer) String() string {
 	return fmt.Sprintf("{input:'%s' start:%d pos:%d width:%d}", l.input, l.start, l.pos, l.width)
 }
 
+// Lex tokenizes input eagerly. If the input is malformed the final token is
+// an ErrorToken whose Raw field describes the problem.
 func Lex(input string, logger *slog.Logger) *lexer {
 	l := &lexer{
 		input:  input,
@@ -100,6 +102,7 @@ func (l *lexer) Items() []Token {
 	return l.tokens
 }
 
+// errorf records an ErrorToken and returns a nil state, stopping the lexer.
 func (l *lexer) errorf(format string, args ...any) stateFunc {
 	l.tokens = append(l.tokens, Token{
 		Type: ErrorToken,

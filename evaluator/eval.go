@@ -63,6 +63,8 @@ type Result struct {
 }
 
 // Eval rolls the expression once.
+// Eval rolls the expression once, drawing from src in left-to-right order.
+// The same node and RNG state always produce the same Result.
 func Eval(n parser.Node, src Source) (Result, error) {
 	var res Result
 	if err := collect(n, 1, src, &res); err != nil {
@@ -118,6 +120,8 @@ func collect(n parser.Node, sign int, src Source, res *Result) error {
 	return nil
 }
 
+// rollTerm rolls one Roll node: it draws every die (and explosions), applies
+// any keep/drop modifier, then sums the dice that were kept.
 func rollTerm(r parser.Roll, sign int, src Source) (Term, error) {
 	if r.Count < 1 || r.Sides < 1 {
 		return Term{}, errors.New("roll needs at least one die and one side")

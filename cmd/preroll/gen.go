@@ -18,6 +18,8 @@ type table struct {
 	Results []evaluator.Result
 }
 
+// gen implements "preroll gen". It returns the process exit code: 0 on
+// success, 1 for bad expressions or write failures, 2 for bad usage.
 func gen(args []string, stdout, stderr io.Writer) int {
 	var (
 		expr   string
